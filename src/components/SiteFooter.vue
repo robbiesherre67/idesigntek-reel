@@ -62,7 +62,7 @@
         <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
           <h3 class="font-semibold">Local Time (LA)</h3>
           <p class="text-2xl mt-2 tabular-nums">{{ time }}</p>
-          <p class="text-white/50 text-sm">America/Los_Angeles</p>
+          <p class="text-white/50 text-sm">Los Angeles</p>
         </div>
 
         <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
@@ -70,7 +70,6 @@
           <ul class="mt-3 space-y-2 text-white/80">
             <li><a class="link" href="https://github.com/your-username" target="_blank" rel="noopener">GitHub</a></li>
             <li><a class="link" href="https://www.linkedin.com/in/your-handle" target="_blank" rel="noopener">LinkedIn</a></li>
-            <li><a class="link" href="https://x.com/your-handle" target="_blank" rel="noopener">X / Twitter</a></li>
           </ul>
         </div>
       </aside>
