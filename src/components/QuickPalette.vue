@@ -1,15 +1,24 @@
 <template>
-  <Teleport to="body">
-    <div v-if="state.open" class="fixed inset-0 z-[999]">
-      <!-- backdrop -->
-      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="close"></div>
+  <!-- Trigger button near the menu (top-right) -->
+  <button
+    class="fixed top-3 right-4 md:top-4 md:right-6 z-[1300] h-9 px-3 rounded-xl border border-white/20 bg-white/10 backdrop-blur hover:bg-white/20 transition"
+    title="Toggle QuickNav (⌘/Ctrl + K)"
+    aria-label="Toggle QuickNav"
+    @click="state.open ? closeQuickNav() : openQuickNav()"
+  >
+    <span class="text-sm font-medium">QuickNav</span>
+  </button>
 
-      <!-- panel -->
+  <!-- Palette -->
+  <Teleport to="body">
+    <div v-if="state.open" class="fixed inset-0 z-[1250]">
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeQuickNav()"></div>
+
       <div
         class="absolute left-1/2 top-24 -translate-x-1/2 w-[92vw] max-w-xl rounded-2xl border border-white/10 bg-[#0b0b0c]/95 shadow-soft"
-        role="dialog" aria-modal="true" aria-label="Quick navigation"
+        role="dialog" aria-modal="true" aria-label="QuickNav"
+        @keydown.stop
       >
-        <!-- input -->
         <div class="p-3 border-b border-white/10">
           <input
             id="quicknav-input"
@@ -17,15 +26,15 @@
             @keydown.down.prevent="move(1)"
             @keydown.up.prevent="move(-1)"
             @keydown.enter.prevent="activate"
-            @keydown.esc.prevent="close"
+            @keydown.esc.prevent="closeQuickNav()"
             type="text" placeholder="Search: pages, actions, links…"
             class="w-full bg-transparent outline-none text-base placeholder-white/40"
+            autocomplete="off"
           />
         </div>
 
-        <!-- results -->
         <ul class="max-h-[60vh] overflow-auto py-2">
-          <template v-for="(group, gi) in grouped" :key="gi">
+          <template v-for="group in grouped" :key="group.label">
             <li class="px-3 py-1 text-xs uppercase tracking-widest text-white/40">{{ group.label }}</li>
             <li v-for="(cmd, i) in group.items" :key="cmd.key">
               <button
@@ -61,64 +70,47 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { quickNav as state, closeQuickNav as close, openQuickNav as open } from '@/stores/quickNav'
+import { quickNav as state, openQuickNav, closeQuickNav } from '@/stores/quickNav'
 
 type CommandGroup = 'Navigate' | 'Sections' | 'Contact' | 'Social'
-type Command = {
-  key: string
-  title: string
-  group: CommandGroup
-  note?: string
-  kbd?: string
-  run: () => void
-}
+type Command = { key: string; title: string; group: CommandGroup; note?: string; kbd?: string; run: () => void }
 
 const router = useRouter()
+const selected = ref(0)
 
-function goto(path: string) {
-  return async () => {
-    await router.push(path)
-    close()
-  }
-}
+/* Commands (Home first so index 0 = Home) */
+function goto(path: string) { return async () => { await router.push(path); closeQuickNav() } }
 function gotoAndScroll(path: string, hashId: string) {
   return async () => {
     await router.push(path)
     requestAnimationFrame(() => {
       document.getElementById(hashId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
-    close()
+    closeQuickNav()
   }
 }
-
-/* ---- Commands ---- */
 const BASE_COMMANDS: Command[] = [
-  // Navigate
-  { key: 'home',  title: 'Home', group: 'Navigate', run: goto('/') },
-  { key: 'work',  title: 'Work', group: 'Navigate', run: goto('/work') },
+  { key: 'home',    title: 'Home',    group: 'Navigate', run: goto('/') },
+  { key: 'work',    title: 'Work',    group: 'Navigate', run: goto('/work') },
   { key: 'contact', title: 'Contact', group: 'Navigate', run: goto('/contact') },
-
-  // Sections (ensure IDs exist)
   { key: 'selwork', title: 'Home → Selected Work', group: 'Sections', note: 'Jump to the case study rail', run: gotoAndScroll('/', 'selected-work') },
-
-  // Social
-  { key: 'github',   title: 'GitHub: RobbieSherre67', group: 'Social', run: () => { window.open('https://github.com/robbiesherre67', '_blank', 'noopener'); close() } },
-  { key: 'linkedin', title: 'LinkedIn: Robbie-Sherre', group: 'Social', run: () => { window.open('https://www.linkedin.com/in/robbie-sherre', '_blank', 'noopener'); close() } },
+  { key: 'github',   title: 'GitHub: RobbieSherre67', group: 'Social', run: () => { window.open('https://github.com/robbiesherre67', '_blank', 'noopener'); closeQuickNav() } },
+  { key: 'linkedin', title: 'LinkedIn: Robbie-Sherre', group: 'Social', run: () => { window.open('https://www.linkedin.com/in/robbie-sherre', '_blank', 'noopener'); closeQuickNav() } },
 ]
 
-/* ---- Filtering (no TS generics needed) ---- */
+/* Filtering */
 function score(text: string, q: string) {
-  const t = text.toLowerCase()
-  if (t === q) return 3
-  if (t.startsWith(q)) return 2
-  if (t.includes(q)) return 1
+  const t = text.toLowerCase(), qq = q.toLowerCase()
+  if (!qq) return 0
+  if (t === qq) return 3
+  if (t.startsWith(qq)) return 2
+  if (t.includes(qq)) return 1
   return 0
 }
-
 const flat = computed(() => {
-  const q = state.query.trim().toLowerCase()
+  const q = state.query.trim()
   if (!q) return BASE_COMMANDS
   return BASE_COMMANDS
     .map(cmd => ({ cmd, s: score(cmd.title, q) + score(cmd.group, q) + score(cmd.note || '', q) }))
@@ -127,23 +119,19 @@ const flat = computed(() => {
     .map(x => x.cmd)
 })
 
+/* Stable group order */
+const GROUP_ORDER: CommandGroup[] = ['Navigate', 'Sections', 'Contact', 'Social']
 const grouped = computed(() => {
-  const by = new Map<CommandGroup, Command[]>()
-  for (const c of flat.value) {
-    if (!by.has(c.group)) by.set(c.group, [])
-    by.get(c.group)!.push(c)
-  }
-  return Array.from(by.entries()).map(([label, items]) => ({ label, items }))
+  const buckets = new Map<CommandGroup, Command[]>()
+  for (const g of GROUP_ORDER) buckets.set(g, [])
+  for (const c of flat.value) buckets.get(c.group)!.push(c)
+  return GROUP_ORDER.map(label => ({ label, items: buckets.get(label)! })).filter(g => g.items.length)
 })
 
-/* ---- Keyboard nav & hotkeys ---- */
-const selected = ref(0)
+/* Keyboard nav + hotkey */
 function indexFor(group: { items: Command[] }, i: number) {
   let n = 0
-  for (const g of grouped.value) {
-    if (g === group) return n + i
-    n += g.items.length
-  }
+  for (const g of grouped.value) { if (g === group) return n + i; n += g.items.length }
   return 0
 }
 function move(delta: number) {
@@ -151,17 +139,15 @@ function move(delta: number) {
   if (!n) return
   selected.value = (selected.value + delta + n) % n
 }
-function activate() {
-  flat.value[selected.value]?.run()
-}
-
+function activate() { flat.value[selected.value]?.run() }
 function onGlobalKey(e: KeyboardEvent) {
   const metaK = (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey))
-  if (metaK) {
-    e.preventDefault()
-    state.open ? close() : open()
-  }
+  if (metaK) { e.preventDefault(); state.open ? closeQuickNav() : openQuickNav() }
 }
+
+/* Reset highlight to Home on open/clear */
+watch(() => state.open, (v) => { if (v) selected.value = 0 })
+watch(() => state.query, (q) => { if (!q) selected.value = 0 })
 
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onUnmounted(() => window.removeEventListener('keydown', onGlobalKey))

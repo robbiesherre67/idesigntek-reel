@@ -1,18 +1,24 @@
 <template>
   <div id="layout" class="min-h-screen text-mist">
-    <SiteNav />
+    <!-- Use the responsive header -->
+    <AppHeader />
+
+    <!-- Page content -->
     <RouterView v-slot="{ Component }">
       <Transition name="route" mode="out-in">
         <component :is="Component" />
       </Transition>
     </RouterView>
+
+    <!-- Extras -->
     <QuickPalette />
     <SiteFooter />
   </div>
 </template>
 
 <script setup lang="ts">
-import SiteNav from './components/SiteNav.vue'
+import AppHeader from '@/components/AppHeader.vue'   // ← new
+// remove SiteNav import
 import QuickPalette from './components/QuickPalette.vue'
 import SiteFooter from './components/SiteFooter.vue'
 </script>
