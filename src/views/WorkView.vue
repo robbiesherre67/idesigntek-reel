@@ -71,8 +71,8 @@ const repos: Item[] = [
   },
   {
     label: 'portfolio-vite — this site',
-    href: 'https://github.com/robbiesherre67/portfolio-vite',
-    meta: 'GSAP • Tailwind • Vite',
+    href: 'https://idesigntek.com/idesigntek-reel/',
+    meta: 'Vue3 • GSAP • Tailwind • Vite',
   },
 ]
 
